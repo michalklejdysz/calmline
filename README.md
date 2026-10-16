@@ -4,6 +4,8 @@
 
 <p align="center">A quiet status line for Claude Code.<br>Grey until something needs you. No config file: ask your Claude to change it.</p>
 
+<p align="center"><a href="https://github.com/michalklejdysz/calmline/actions/workflows/ci.yml"><img src="https://github.com/michalklejdysz/calmline/actions/workflows/ci.yml/badge.svg" alt="CI"></a> <a href="LICENSE"><img src="https://img.shields.io/badge/license-MIT-lightgrey" alt="MIT license"></a></p>
+
 ---
 
 ## Install
@@ -23,6 +25,8 @@ Plugins can't set the status line themselves, so the second command does it. You
 ```sh
 curl -fsSL https://raw.githubusercontent.com/michalklejdysz/calmline/main/plugin/install.sh | sh
 ```
+
+The installer ([read it](plugin/install.sh), it's short) copies five files to `~/.claude/calmline`, checks that they run, saves your current status line and sets one key, `statusLine`, in `~/.claude/settings.json`. Nothing else, and nothing is sent anywhere.
 
 Or with git, so updates are a `git pull`:
 

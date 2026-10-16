@@ -1,0 +1,32 @@
+name: Bug
+description: Something shows wrong, shows `name !`, or the line is blank
+body:
+  - type: textarea
+    id: what
+    attributes:
+      label: What happens
+      description: What you see, and what you expected. A screenshot of the status line helps.
+    validations:
+      required: true
+  - type: textarea
+    id: output
+    attributes:
+      label: Output and error log
+      description: |
+        From `~/.claude/calmline` (or `plugin/` in a git clone), using the python from your `statusLine` command:
+        `python3 calmline.py < fixtures/full.json` and `tail -20 error.log`
+      render: text
+    validations:
+      required: true
+  - type: input
+    id: versions
+    attributes:
+      label: Claude Code version, OS, terminal
+      placeholder: 2.1.301, macOS 26, iTerm2
+    validations:
+      required: true
+  - type: textarea
+    id: my_segments
+    attributes:
+      label: my_segments.py (if you have one)
+      render: python
