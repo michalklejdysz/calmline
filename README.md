@@ -34,7 +34,7 @@ sh ~/.claude/calmline/plugin/install.sh
 
 ## Make it yours
 
-One sentence to Claude is enough. Each layout below is what **Opus 5.5 wrote from the prompt in its caption, on the first try**, touching only `my_segments.py`:
+One sentence to Claude is enough. Each layout below is what **Opus 5.5 wrote from the one prompt in its caption**, no follow-ups, touching only `my_segments.py` ([the files it wrote](demo/layouts)):
 
 <p align="center"><img src="demo/minimal.svg" alt="one line with only the 5-hour and weekly usage" width="820"></p>
 <p align="center"><img src="demo/focus.svg" alt="git branch first, no session name or cache, context red at 50%" width="820"></p>
@@ -47,7 +47,7 @@ More to try:
 
 > Make the weekly limit turn yellow at 30%.
 
-Your changes live in `~/.claude/calmline/my_segments.py`. Updates never touch it. [CLAUDE.md](plugin/CLAUDE.md) tells your Claude the rules: what data exists, how to test, what keeps the line fast.
+Your changes live in `~/.claude/calmline/my_segments.py` (`plugin/my_segments.py` in a git clone). Updates never touch it. [CLAUDE.md](plugin/CLAUDE.md) tells your Claude the rules: what data exists, how to test, what keeps the line fast.
 
 ## What the default shows
 
@@ -64,7 +64,8 @@ With the plugin, updates arrive like any plugin update, and the new version is c
 
 - A segment slower than 300 ms is dropped, so the line never lags
 - A broken segment shows `name !` and the rest still renders
-- No network and nothing leaves your machine; one small state file holds the last-turn numbers
+- No network and nothing leaves your machine; a small state file per session holds the last-turn numbers
+- Something shows `name !`? The reason is in `~/.claude/calmline/error.log`, and your Claude knows to look there. A blank line means Claude Code can't run the command at all: run the `statusLine` command from `~/.claude/settings.json` yourself to see why
 
 ## Requirements
 

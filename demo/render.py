@@ -32,7 +32,7 @@ def state(session, branch, dirty, ctx, five, week, total, prev_total, turn_s, fa
     d["rate_limits"]["five_hour"].update(used_percentage=five, resets_at=now + five_reset * 60 + 30)
     d["rate_limits"]["seven_day"].update(used_percentage=week, resets_at=now + (4 * 1440 + 23 * 60) * 60 + 30)
     fake_git = lambda _: calmline.paint("36", f"⎇ {branch}") + (calmline.paint("33", " ●") if dirty else "")
-    segments = {**calmline.SEGMENTS, **(extra or {}), "dir": lambda _: calmline.paint("34", "~/code/shop"), "git": fake_git, "ponytail": lambda _: None}
+    segments = {**calmline.SEGMENTS, **(extra or {}), "dir": lambda _: "~/code/shop", "git": fake_git, "ponytail": lambda _: None}
     with tempfile.TemporaryDirectory() as tmp:
         os.environ["CALMLINE_STATE"] = tmp
         d["cost"] = {"total_cost_usd": prev_total, "total_api_duration_ms": 300000}
@@ -112,20 +112,20 @@ def svg(frames, label, cols):
 """
 
 
-def red_at_50(d):
-    used = (d.get("context_window") or {}).get("used_percentage")
-    return None if used is None else calmline.dim("ctx ") + calmline.level(used, 40, 50)
+WARM = dict(session="Fix login redirect", branch="feat/login", dirty=True, ctx=52, five=57, week=52, total=1.84, prev_total=1.67, turn_s=26)
 
 
-WARM = dict(session="Fix login redirect", branch="feat/login", dirty=True, ctx=46, five=57, week=52, total=1.84, prev_total=1.67, turn_s=26)
+def layout(name):
+    """A my_segments.py that Opus 5.5 wrote from one prompt, kept verbatim in demo/layouts/."""
+    return calmline.load_custom(os.path.join(ROOT, "demo", "layouts", f"{name}.py"))
 
-# Each layout is what Opus 5.5 wrote into my_segments.py from the one prompt in the caption.
+
 GALLERY = {
-    "minimal": ("“one line with only the 5-hour and weekly usage”", state(**WARM, lines=[["5h", "week"]])),
-    "focus": (
-        "“git branch first, drop session name and cache, context red at 50%”",
-        state(**{**WARM, "ctx": 52}, lines=[["git", "model", "context"], calmline.LINES[1]], extra={"context": red_at_50}),
-    ),
+    name: (caption, state(**WARM, lines=layout(name)[1], extra=layout(name)[0]))
+    for name, caption in (
+        ("minimal", "“one line with only the 5-hour and weekly usage”"),
+        ("focus", "“git branch first, drop session name and cache, context red at 50%”"),
+    )
 }
 
 if __name__ == "__main__":

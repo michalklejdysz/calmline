@@ -2,7 +2,7 @@
   "session_id": "demo-session",
   "prompt_id": "p1",
   "session_name": "Fix login redirect",
-  "cwd": "/nonexistent",
+  "cwd": "/home/you/code/shop",
   "model": {
     "id": "claude-opus-5-5",
     "display_name": "Opus 5.5"

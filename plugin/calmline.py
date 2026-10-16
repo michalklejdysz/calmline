@@ -94,7 +94,7 @@ def directory(d):
     home = os.path.expanduser("~")
     path = "~" + cwd[len(home):] if cwd == home or cwd.startswith(home + os.sep) else cwd
     parts = path.split(os.sep)
-    return paint("34", os.sep.join(parts[-2:]) if len(parts) > 3 else path)
+    return os.sep.join(parts[-2:]) if len(parts) > 3 else path
 
 
 def git(d):
