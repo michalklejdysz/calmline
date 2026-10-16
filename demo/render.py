@@ -34,7 +34,7 @@ def state(session, branch, dirty, ctx, five, week, total, prev_total, turn_s, fa
     fake_git = lambda _: calmline.paint("36", f"⎇ {branch}") + (calmline.paint("33", " ●") if dirty else "")
     segments = {**calmline.SEGMENTS, **(extra or {}), "dir": lambda _: calmline.paint("34", "~/code/shop"), "git": fake_git, "ponytail": lambda _: None}
     with tempfile.TemporaryDirectory() as tmp:
-        os.environ["CALMLINE_STATE"] = os.path.join(tmp, "turn.json")
+        os.environ["CALMLINE_STATE"] = tmp
         d["cost"] = {"total_cost_usd": prev_total, "total_api_duration_ms": 300000}
         calmline.render(d, segments, lines)
         d["cost"] = {"total_cost_usd": total, "total_api_duration_ms": 300000 + turn_s * 1000}

@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""calmline: a calm two-line status line for Claude Code.
+"""calmline: a calm status line for Claude Code.
 
 Reads the status line JSON from stdin, prints one line per entry in LINES.
 Labels and separators are dimmed; colour appears only where a number needs attention.
@@ -8,6 +8,7 @@ Standard library only. Your own segments go in my_segments.py (see CLAUDE.md).
 import importlib.util
 import json
 import os
+import re
 import signal
 import subprocess
 import sys
@@ -42,8 +43,39 @@ def until(ts, now=None):
     return f"{m // 60}h{m % 60:02d}" if m >= 60 else f"{m}m"
 
 
-def state_path():
-    return os.path.expanduser(os.environ.get("CALMLINE_STATE", "~/.claude/.calmline-turn.json"))
+STATE_MAX_AGE_S = 7 * 86400
+
+
+def state_dir():
+    return os.path.expanduser(os.environ.get("CALMLINE_STATE", "~/.claude/calmline-state"))
+
+
+def log_error(message):
+    """Errors go to error.log next to this file too: Claude Code does not show a status line's stderr."""
+    print(f"calmline: {message}", file=sys.stderr)
+    path = os.environ.get("CALMLINE_LOG") or os.path.join(os.path.dirname(os.path.abspath(__file__)), "error.log")
+    try:
+        mode = "w" if os.path.exists(path) and os.path.getsize(path) > 100_000 else "a"  # keep it small
+        with open(path, mode) as f:
+            f.write(f"{time.strftime('%Y-%m-%d %H:%M:%S')} {message}\n")
+    except OSError:
+        pass
+
+
+def write_json(path, data):
+    """Atomic: a reader never sees a half-written file."""
+    os.makedirs(os.path.dirname(path), exist_ok=True)
+    tmp = f"{path}.{os.getpid()}.tmp"
+    with open(tmp, "w") as f:
+        json.dump(data, f)
+    os.replace(tmp, path)
+
+
+def prune_state(directory, now):
+    for name in os.listdir(directory):
+        path = os.path.join(directory, name)
+        if now - os.path.getmtime(path) > STATE_MAX_AGE_S:
+            os.remove(path)
 
 
 # Segments: each takes the status line input and returns a string, or None to hide itself.
@@ -110,28 +142,35 @@ def ponytail(d):
 
 
 def last_turn(d):
-    """(cost, api_ms) of the previous turn: change in session totals between two prompt starts."""
+    """(cost, api_ms) of the previous turn: change in session totals between two prompt starts.
+
+    One state file per session, so parallel Claude Code sessions don't reset each other.
+    """
     c = d.get("cost") or {}
     total, ms = c.get("total_cost_usd"), c.get("total_api_duration_ms") or 0
+    session = re.sub(r"[^A-Za-z0-9_-]", "_", str(d.get("session_id") or "default"))[:80]
+    path = os.path.join(state_dir(), session + ".json")
     try:
-        with open(state_path()) as f:
+        with open(path) as f:
             s = json.load(f)
     except (OSError, ValueError):
-        s = {}
-    same = s.get("session") == d.get("session_id")
-    if not same or s.get("prompt") != d.get("prompt_id"):
-        last = (s["end"] - s["start"], s["end_ms"] - s["start_ms"]) if same and "start" in s else None
-        s = {
-            "session": d.get("session_id"),
-            "prompt": d.get("prompt_id"),
-            "start": s["end"] if same else total,
-            "start_ms": s["end_ms"] if same else ms,
-            "last": last,
-        }
+        s = None
+    keys = ("start", "start_ms", "end", "end_ms")
+    valid = isinstance(s, dict) and all(isinstance(s.get(k), (int, float)) for k in keys)
+    new_prompt = not valid or s.get("prompt") != d.get("prompt_id")
+    if not valid:
+        s = {"prompt": d.get("prompt_id"), "start": total, "start_ms": ms, "last": None}
+    elif new_prompt:
+        last = [s["end"] - s["start"], s["end_ms"] - s["start_ms"]]
+        s = {"prompt": d.get("prompt_id"), "start": s["end"], "start_ms": s["end_ms"], "last": last}
     s["end"], s["end_ms"] = total, ms
-    with open(state_path(), "w") as f:
-        json.dump(s, f)
-    return s["last"]
+    try:
+        write_json(path, s)
+        if new_prompt:
+            prune_state(state_dir(), time.time())
+    except OSError as e:  # the session total still shows; only the last-turn figure needs the state
+        log_error(f"state not saved: {e!r}")
+    return s.get("last")
 
 
 def cost(d):
@@ -174,7 +213,7 @@ LINES = [
 SEPARATOR = dim("  │  ")
 
 
-class _Slow(Exception):
+class _Slow(BaseException):  # not an Exception, so a segment's own `except Exception` can't swallow the timeout
     pass
 
 
@@ -189,15 +228,29 @@ def run_segment(name, fn, d):
         signal.signal(signal.SIGALRM, _raise_slow)
         signal.setitimer(signal.ITIMER_REAL, BUDGET_S)
     try:
-        return fn(d)
+        result = fn(d)
+        if timed:
+            signal.setitimer(signal.ITIMER_REAL, 0)
+        if result is None or isinstance(result, str):
+            return result
+        raise TypeError(f"returned {type(result).__name__}, expected str or None")
     except (_Slow, subprocess.TimeoutExpired):
         return dim(f"{name} …")
-    except Exception as e:  # any bug in any segment, ours or the user's
-        print(f"calmline: segment {name!r} failed: {e!r}", file=sys.stderr)
+    except (Exception, SystemExit) as e:  # any bug in any segment, ours or the user's
+        log_error(f"segment {name!r} failed: {e!r}")
         return paint("31", f"{name} !")
     finally:
         if timed:
             signal.setitimer(signal.ITIMER_REAL, 0)
+
+
+def segment_text(name, segments, d):
+    if name not in segments:
+        return paint("31", f"{name} ?")
+    try:
+        return run_segment(name, segments[name], d)
+    except _Slow:  # the alarm went off inside run_segment's own handlers, after the segment ran
+        return dim(f"{name} …")
 
 
 def load_custom(path):
@@ -205,17 +258,25 @@ def load_custom(path):
     if not os.path.exists(path):
         return {}, None
     sys.modules.setdefault("calmline", sys.modules[__name__])
+    sys.dont_write_bytecode = True  # a cached .pyc can hide an edit made within the same second
     spec = importlib.util.spec_from_file_location("my_segments", path)
     mod = importlib.util.module_from_spec(spec)
     spec.loader.exec_module(mod)
-    return getattr(mod, "SEGMENTS", {}), getattr(mod, "LINES", None)
+    segments, lines = getattr(mod, "SEGMENTS", {}), getattr(mod, "LINES", None)
+    if not isinstance(segments, dict) or not all(callable(f) for f in segments.values()):
+        raise TypeError("SEGMENTS must be a dict of name -> function")
+    if lines is not None and not (
+        isinstance(lines, list) and all(isinstance(l, list) and all(isinstance(n, str) for n in l) for l in lines)
+    ):
+        raise TypeError("LINES must be a list of lists of segment names")
+    return segments, lines
 
 
 def render(d, segments=None, lines=None):
     segments = segments or SEGMENTS
     out = []
     for names in lines or LINES:
-        parts = [run_segment(n, segments[n], d) if n in segments else paint("31", f"{n} ?") for n in names]
+        parts = [segment_text(n, segments, d) for n in names]
         line = SEPARATOR.join(p for p in parts if p)
         if line:
             out.append(line)
@@ -223,11 +284,18 @@ def render(d, segments=None, lines=None):
 
 
 def main():
-    d = json.load(sys.stdin)
+    try:
+        d = json.load(sys.stdin)
+        if not isinstance(d, dict):
+            raise ValueError("not a JSON object")
+    except ValueError as e:
+        log_error(f"bad input from Claude Code: {e!r}")
+        print(paint("31", "calmline: no input"))
+        return
     try:
         extra, lines = load_custom(os.path.join(os.path.dirname(os.path.abspath(__file__)), "my_segments.py"))
-    except Exception as e:  # a broken my_segments.py must not blank the whole line
-        print(f"calmline: my_segments.py failed: {e!r}", file=sys.stderr)
+    except (Exception, SystemExit) as e:  # a broken my_segments.py must not blank the whole line
+        log_error(f"my_segments.py failed: {e!r}")
         extra, lines = {"my_segments": lambda _: paint("31", "my_segments.py !")}, LINES + [["my_segments"]]
     print("\n".join(render(d, {**SEGMENTS, **extra}, lines)))
 

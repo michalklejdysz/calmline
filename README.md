@@ -21,14 +21,14 @@ Plugins can't set the status line themselves, so the second command does it. You
 <summary>Without the plugin</summary>
 
 ```sh
-curl -fsSL https://raw.githubusercontent.com/michalklejdysz/calmline/main/install.sh | sh
+curl -fsSL https://raw.githubusercontent.com/michalklejdysz/calmline/main/plugin/install.sh | sh
 ```
 
 Or with git, so updates are a `git pull`:
 
 ```sh
 git clone https://github.com/michalklejdysz/calmline ~/.claude/calmline
-sh ~/.claude/calmline/install.sh
+sh ~/.claude/calmline/plugin/install.sh
 ```
 </details>
 
