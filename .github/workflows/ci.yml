@@ -14,7 +14,7 @@ jobs:
       fail-fast: false
       matrix:
         include:
-          - { os: ubuntu-24.04, python: "3.8" }  # setup-python has no 3.8 build for newer Ubuntu images
+          - { os: ubuntu-24.04, python: "3.8" }  # 3.8 is end-of-life; pinned so a new ubuntu-latest image without a 3.8 build cannot break CI
           - { os: ubuntu-latest, python: "3.13" }
           - { os: macos-latest, python: "3.13" }
     runs-on: ${{ matrix.os }}
