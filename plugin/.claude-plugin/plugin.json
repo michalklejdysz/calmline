@@ -1,6 +1,6 @@
 {
   "name": "calmline",
-  "version": "0.2.0",
+  "version": "0.3.0",
   "description": "A calm status line for Claude Code. Minimal or packed, just ask your Claude to change it.",
   "author": {
     "name": "Michał Klejdysz"
