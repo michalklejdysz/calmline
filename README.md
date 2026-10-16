@@ -27,7 +27,8 @@ curl -fsSL https://raw.githubusercontent.com/michalklejdysz/calmline/main/instal
 Or with git, so updates are a `git pull`:
 
 ```sh
-git clone https://github.com/michalklejdysz/calmline ~/.claude/calmline && sh ~/.claude/calmline/install.sh
+git clone https://github.com/michalklejdysz/calmline ~/.claude/calmline
+sh ~/.claude/calmline/install.sh
 ```
 </details>
 
