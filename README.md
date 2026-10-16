@@ -25,7 +25,11 @@ Add to `~/.claude/settings.json`:
 "statusLine": { "type": "command", "command": "python3 ~/.claude/calmline/calmline.py" }
 ```
 
-Python 3.8+, standard library only. Or skip both steps and tell Claude: *"install calmline as my status line"*.
+Or skip both steps and tell Claude: *"install calmline as my status line"*.
+
+**You need:** Python 3.8+ (macOS ships it as `/usr/bin/python3`), standard library only. Git is optional: without it the branch is just hidden. Any terminal with colour and UTF-8 works. In iTerm2, Ghostty, kitty, WezTerm or Windows Terminal, use a font with `⎇ ↻ ⚡` (SF Mono, JetBrains Mono, any Nerd Font). The 5h and weekly limits show only on a Claude subscription (Pro/Max). API-key users don't get these fields from Claude Code.
+
+**Tested on:** Claude Code 2.1.301 with Opus 5.5, macOS, iTerm2. Tests pass on Python 3.8, 3.9 and 3.14. On Windows it runs, but without the 300 ms segment cut-off: `signal.setitimer` is Unix only.
 
 ## Make it yours
 

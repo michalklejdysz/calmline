@@ -61,7 +61,10 @@ def git(d):
     run = lambda *a: subprocess.run(
         ["git", "-C", cwd, *a], capture_output=True, text=True, timeout=0.25
     ).stdout.strip()
-    branch = run("branch", "--show-current") or run("rev-parse", "--short", "HEAD")
+    try:
+        branch = run("branch", "--show-current") or run("rev-parse", "--short", "HEAD")
+    except FileNotFoundError:  # git is optional
+        return None
     if not branch:
         return None
     dirty = paint("33", "●") if run("status", "--porcelain", "-uno") else ""

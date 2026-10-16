@@ -82,6 +82,16 @@ class CalmlineTest(unittest.TestCase):
         self.assertLess(time.monotonic() - start, 1)
         self.assertEqual(line, "slow …")
 
+    def test_without_git_installed_the_branch_is_just_hidden(self):
+        d = {**fixture("full.json"), "cwd": ROOT}
+        path = os.environ["PATH"]
+        os.environ["PATH"] = "/nonexistent"
+        try:
+            top = plain(calmline.render(d))[0]
+        finally:
+            os.environ["PATH"] = path
+        self.assertNotIn("git", top)
+
     def test_unknown_segment_name_is_visible(self):
         line = plain(calmline.render(fixture("full.json"), lines=[["model", "typo"]]))[0]
         self.assertIn("typo ?", line)
