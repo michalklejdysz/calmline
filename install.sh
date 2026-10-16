@@ -13,10 +13,13 @@ for c in "$(command -v python3 || true)" /usr/bin/python3 /opt/homebrew/bin/pyth
 done
 [ -n "$py" ] || { echo "calmline needs Python 3.8+ (python3)" >&2; exit 1; }
 
-mkdir -p "$dest"
-for f in calmline.py CLAUDE.md my_segments.example.py; do
-  curl -fsSL "$src/$f" -o "$dest/$f"
-done
+# Run from a git clone in $dest: the files are already there, only settings need updating.
+if [ "$(cd "$(dirname "$0")" && pwd)" != "$dest" ]; then
+  mkdir -p "$dest"
+  for f in calmline.py CLAUDE.md my_segments.example.py; do
+    curl -fsSL "$src/$f" -o "$dest/$f"
+  done
+fi
 
 # Point statusLine at calmline; an existing statusLine is saved first so it can be restored.
 "$py" - "$settings" "$dest" "$py" <<'PY'

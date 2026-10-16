@@ -24,7 +24,11 @@ Plugins can't set the status line themselves, so the second command does it. You
 curl -fsSL https://raw.githubusercontent.com/michalklejdysz/calmline/main/install.sh | sh
 ```
 
-Or `git clone` this repo to `~/.claude/calmline` and set `"statusLine": {"type": "command", "command": "python3 ~/.claude/calmline/calmline.py"}` in `~/.claude/settings.json`.
+Or with git, so updates are a `git pull`:
+
+```sh
+git clone https://github.com/michalklejdysz/calmline ~/.claude/calmline && sh ~/.claude/calmline/install.sh
+```
 </details>
 
 ## Make it yours

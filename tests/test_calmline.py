@@ -135,6 +135,15 @@ class CalmlineTest(unittest.TestCase):
         with open(os.path.join(home, ".claude", "calmline", "previous-statusline.json")) as f:
             self.assertEqual(json.load(f)["command"], "~/old.sh")
 
+    def test_install_script_from_a_git_clone_only_sets_the_status_line(self):
+        home = os.path.join(self.tmp.name, "home")
+        dest = os.path.join(home, ".claude", "calmline")
+        subprocess.run(["git", "clone", "-q", ROOT, dest], check=True)
+        env = {**os.environ, "HOME": home, "CALMLINE_SRC": "file:///nonexistent"}  # any download would fail
+        subprocess.run(["sh", os.path.join(dest, "install.sh")], env=env, check=True, capture_output=True)
+        with open(os.path.join(home, ".claude", "settings.json")) as f:
+            self.assertTrue(json.load(f)["statusLine"]["command"].endswith("/.claude/calmline/calmline.py"))
+
     def test_update_hook_refreshes_the_copy_but_not_my_segments(self):
         dest = os.path.join(self.tmp.name, "home", ".claude", "calmline")
         os.makedirs(dest)
