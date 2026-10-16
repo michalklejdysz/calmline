@@ -78,7 +78,7 @@ def git(d):
         return None
     if not branch:
         return None
-    dirty = paint("33", "●") if run("status", "--porcelain", "-uno") else ""
+    dirty = paint("33", " ●") if run("status", "--porcelain", "-uno") else ""
     return paint("36", f"⎇ {branch}") + dirty
 
 

@@ -31,7 +31,7 @@ def state(session, branch, dirty, ctx, five, week, total, prev_total, turn_s, fa
     d["context_window"]["used_percentage"] = ctx
     d["rate_limits"]["five_hour"].update(used_percentage=five, resets_at=now + five_reset * 60 + 30)
     d["rate_limits"]["seven_day"].update(used_percentage=week, resets_at=now + (4 * 1440 + 23 * 60) * 60 + 30)
-    fake_git = lambda _: calmline.paint("36", f"⎇ {branch}") + (calmline.paint("33", "●") if dirty else "")
+    fake_git = lambda _: calmline.paint("36", f"⎇ {branch}") + (calmline.paint("33", " ●") if dirty else "")
     segments = {**calmline.SEGMENTS, **(extra or {}), "dir": lambda _: calmline.paint("34", "~/code/shop"), "git": fake_git, "ponytail": lambda _: None}
     with tempfile.TemporaryDirectory() as tmp:
         os.environ["CALMLINE_STATE"] = os.path.join(tmp, "turn.json")
