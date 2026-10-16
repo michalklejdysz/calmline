@@ -1,0 +1,35 @@
+{
+  "session_id": "demo-session",
+  "prompt_id": "p1",
+  "session_name": "Fix login redirect",
+  "cwd": "/nonexistent",
+  "model": {
+    "id": "claude-opus-5-5",
+    "display_name": "Opus 5.5"
+  },
+  "effort": {
+    "level": "medium"
+  },
+  "fast_mode": false,
+  "context_window": {
+    "used_percentage": 23,
+    "context_window_size": 1000000
+  },
+  "prompt_cache": {
+    "hit_ratio": 0.97
+  },
+  "cost": {
+    "total_cost_usd": 1.84,
+    "total_api_duration_ms": 412000
+  },
+  "rate_limits": {
+    "five_hour": {
+      "used_percentage": 37,
+      "resets_at": 1792152694
+    },
+    "seven_day": {
+      "used_percentage": 62,
+      "resets_at": 1792576814
+    }
+  }
+}
