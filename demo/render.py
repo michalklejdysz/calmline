@@ -24,7 +24,7 @@ with open(os.path.join(ROOT, "fixtures", "full.json")) as f:
     BASE = json.load(f)
 
 
-def state(session, branch, dirty, ctx, five, week, total, prev_total, turn_s, fast=False, five_reset=98):
+def state(session, branch, dirty, ctx, five, week, total, prev_total, turn_s, fast=False, five_reset=98, lines=None, extra=None):
     d = copy.deepcopy(BASE)
     now = time.time()
     d.update(session_name=session, fast_mode=fast)
@@ -32,15 +32,15 @@ def state(session, branch, dirty, ctx, five, week, total, prev_total, turn_s, fa
     d["rate_limits"]["five_hour"].update(used_percentage=five, resets_at=now + five_reset * 60 + 30)
     d["rate_limits"]["seven_day"].update(used_percentage=week, resets_at=now + (4 * 1440 + 23 * 60) * 60 + 30)
     fake_git = lambda _: calmline.paint("36", f"⎇ {branch}") + (calmline.paint("33", "●") if dirty else "")
-    segments = {**calmline.SEGMENTS, "git": fake_git, "ponytail": lambda _: None}
+    segments = {**calmline.SEGMENTS, **(extra or {}), "dir": lambda _: calmline.paint("34", "~/code/shop"), "git": fake_git, "ponytail": lambda _: None}
     with tempfile.TemporaryDirectory() as tmp:
         os.environ["CALMLINE_STATE"] = os.path.join(tmp, "turn.json")
         d["cost"] = {"total_cost_usd": prev_total, "total_api_duration_ms": 300000}
-        calmline.render(d, segments)
+        calmline.render(d, segments, lines)
         d["cost"] = {"total_cost_usd": total, "total_api_duration_ms": 300000 + turn_s * 1000}
-        calmline.render(d, segments)
+        calmline.render(d, segments, lines)
         d["prompt_id"] = "next"
-        return calmline.render(d, segments)
+        return calmline.render(d, segments, lines)
 
 
 FRAMES = [
@@ -80,30 +80,28 @@ def visible_len(line):
     return len(TOKEN.sub("", line))
 
 
-def svg():
-    cols = max(visible_len(l) for _, lines in FRAMES for l in lines)
+def svg(frames, label, cols):
+    """One frame renders still; several cross-fade in a loop."""
     width = int(cols * CHAR_W + PAD * 2)
-    height = 200
-    total = FRAME_S * len(FRAMES)
-    share = 100 / len(FRAMES)
-    fade = 4  # percent of the loop spent cross-fading
-    css = [
-        "text{font-family:'SF Mono',SFMono-Regular,Menlo,Consolas,'Liberation Mono',monospace;font-size:14px;white-space:pre}",
-        f".f{{opacity:0;animation:show {total}s infinite}}",
-        f"@keyframes show{{0%{{opacity:0}}{fade}%{{opacity:1}}{share - fade}%{{opacity:1}}{share}%{{opacity:0}}100%{{opacity:0}}}}",
-        "@media (prefers-reduced-motion:reduce){.f{animation:none}.f0{opacity:1}}",
-    ]
-    for i in range(len(FRAMES)):
-        css.append(f".f{i}{{animation-delay:{i * FRAME_S}s}}")
+    rows_n = max(len(lines) for _, lines in frames)
+    height = 150 + (rows_n - 1) * LINE_H + 28
+    css = ["text{font-family:'SF Mono',SFMono-Regular,Menlo,Consolas,'Liberation Mono',monospace;font-size:14px;white-space:pre}"]
+    if len(frames) > 1:
+        total, share, fade = FRAME_S * len(frames), 100 / len(frames), 4  # fade: percent of the loop spent cross-fading
+        css += [
+            f".f{{opacity:0;animation:show {total:.1f}s infinite}}",
+            f"@keyframes show{{0%{{opacity:0}}{fade}%{{opacity:1}}{share - fade:.2f}%{{opacity:1}}{share:.2f}%{{opacity:0}}100%{{opacity:0}}}}",
+            "@media (prefers-reduced-motion:reduce){.f{animation:none}.f0{opacity:1}}",
+        ] + [f".f{i}{{animation-delay:{i * FRAME_S:.1f}s}}" for i in range(len(frames))]
     body = []
-    for i, (caption, lines) in enumerate(FRAMES):
+    for i, (caption, lines) in enumerate(frames):
         rows = [f'<text x="{PAD}" y="62" fill="{DIMMED}" font-style="italic">{html.escape(caption)}</text>']
         rows.append(f'<text x="{PAD}" y="104"><tspan fill="{FG}">❯ </tspan><tspan fill="{DIMMED}">█</tspan></text>')
         for j, line in enumerate(lines):
             rows.append(f'<text x="{PAD}" y="{150 + j * LINE_H}">{spans(line)}</text>')
         body.append(f'<g class="f f{i}">{"".join(rows)}</g>')
     rule = lambda y: f'<line x1="{PAD - 8}" x2="{width - PAD + 8}" y1="{y}" y2="{y}" stroke="#2f333a"/>'
-    return f"""<svg xmlns="http://www.w3.org/2000/svg" width="{width}" height="{height}" viewBox="0 0 {width} {height}" role="img" aria-label="calmline: a two-line status line for Claude Code, shown calm, warm and red">
+    return f"""<svg xmlns="http://www.w3.org/2000/svg" width="{width}" height="{height}" viewBox="0 0 {width} {height}" role="img" aria-label="{html.escape(label)}">
 <style>{"".join(css)}</style>
 <rect width="{width}" height="{height}" rx="12" fill="{BG}"/>
 <rect width="{width}" height="30" rx="12" fill="{CHROME}"/><rect y="18" width="{width}" height="12" fill="{CHROME}"/>
@@ -114,8 +112,28 @@ def svg():
 """
 
 
+def red_at_50(d):
+    used = (d.get("context_window") or {}).get("used_percentage")
+    return None if used is None else calmline.dim("ctx ") + calmline.level(used, 40, 50)
+
+
+WARM = dict(session="Fix login redirect", branch="feat/login", dirty=True, ctx=46, five=57, week=52, total=1.84, prev_total=1.67, turn_s=26)
+
+# Each layout is what Opus 5.5 wrote into my_segments.py from the one prompt in the caption.
+GALLERY = {
+    "minimal": ("“one line with only the 5-hour and weekly usage”", state(**WARM, lines=[["5h", "week"]])),
+    "focus": (
+        "“git branch first, drop session name and cache, context red at 50%”",
+        state(**{**WARM, "ctx": 52}, lines=[["git", "model", "context"], calmline.LINES[1]], extra={"context": red_at_50}),
+    ),
+}
+
 if __name__ == "__main__":
-    path = os.path.join(ROOT, "demo", "calmline.svg")
-    with open(path, "w") as f:
-        f.write(svg())
-    print(path)
+    cols = max(visible_len(l) for _, lines in [*FRAMES, *GALLERY.values()] for l in lines)
+    outputs = {"calmline": svg(FRAMES, "calmline status line, shown calm, warm and red", cols)}
+    outputs.update({name: svg([frame], f"calmline {name} layout", cols) for name, frame in GALLERY.items()})
+    for name, content in outputs.items():
+        path = os.path.join(ROOT, "demo", f"{name}.svg")
+        with open(path, "w") as f:
+            f.write(content)
+        print(path)

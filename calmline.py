@@ -54,6 +54,17 @@ def session(d):
     return name and paint("1", name)
 
 
+def directory(d):
+    """Folder Claude is working in, home shortened to ~ and only the last two parts kept."""
+    cwd = d.get("cwd")
+    if not cwd:
+        return None
+    home = os.path.expanduser("~")
+    path = "~" + cwd[len(home):] if cwd == home or cwd.startswith(home + os.sep) else cwd
+    parts = path.split(os.sep)
+    return paint("34", os.sep.join(parts[-2:]) if len(parts) > 3 else path)
+
+
 def git(d):
     cwd = d.get("cwd")
     if not cwd:
@@ -144,6 +155,7 @@ def limit(key, label):
 
 SEGMENTS = {
     "session": session,
+    "dir": directory,
     "git": git,
     "model": model,
     "context": context,
@@ -155,7 +167,7 @@ SEGMENTS = {
 }
 
 LINES = [
-    ["session", "git", "model", "context", "cache"],
+    ["session", "dir", "git", "model", "context", "cache"],
     ["ponytail", "cost", "5h", "week"],
 ]
 

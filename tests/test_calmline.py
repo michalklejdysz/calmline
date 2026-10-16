@@ -92,6 +92,15 @@ class CalmlineTest(unittest.TestCase):
             os.environ["PATH"] = path
         self.assertNotIn("git", top)
 
+    def test_dir_shortens_home_and_long_paths(self):
+        home = os.path.expanduser("~")
+        dir_of = lambda cwd: plain([calmline.directory({"cwd": cwd})])[0]
+        self.assertEqual(dir_of(home), "~")
+        self.assertEqual(dir_of(os.path.join(home, "dev", "app")), "~/dev/app")
+        self.assertEqual(dir_of(os.path.join(home, "dev", "app", "mobile", "src")), "mobile/src")
+        self.assertEqual(dir_of("/opt"), "/opt")
+        self.assertIsNone(calmline.directory({}))
+
     def test_unknown_segment_name_is_visible(self):
         line = plain(calmline.render(fixture("full.json"), lines=[["model", "typo"]]))[0]
         self.assertIn("typo ?", line)
@@ -109,6 +118,35 @@ class CalmlineTest(unittest.TestCase):
         finally:
             del os.environ["VIRTUAL_ENV"]
         self.assertTrue(top.endswith("venv api"))
+
+    def test_install_script_sets_status_line_and_keeps_the_previous_one(self):
+        home = os.path.join(self.tmp.name, "home")
+        os.makedirs(os.path.join(home, ".claude"))
+        settings = os.path.join(home, ".claude", "settings.json")
+        with open(settings, "w") as f:
+            json.dump({"theme": "dark", "statusLine": {"type": "command", "command": "~/old.sh"}}, f)
+        env = {**os.environ, "HOME": home, "CALMLINE_SRC": "file://" + ROOT}
+        for _ in range(2):  # a reinstall must not overwrite the saved original
+            subprocess.run(["sh", os.path.join(ROOT, "install.sh")], env=env, check=True, capture_output=True)
+        with open(settings) as f:
+            data = json.load(f)
+        self.assertEqual(data["theme"], "dark")
+        self.assertTrue(data["statusLine"]["command"].endswith("/.claude/calmline/calmline.py"))
+        with open(os.path.join(home, ".claude", "calmline", "previous-statusline.json")) as f:
+            self.assertEqual(json.load(f)["command"], "~/old.sh")
+
+    def test_update_hook_refreshes_the_copy_but_not_my_segments(self):
+        dest = os.path.join(self.tmp.name, "home", ".claude", "calmline")
+        os.makedirs(dest)
+        for name, text in (("calmline.py", "# old"), ("my_segments.py", "mine")):
+            with open(os.path.join(dest, name), "w") as f:
+                f.write(text)
+        env = {**os.environ, "HOME": os.path.join(self.tmp.name, "home"), "CLAUDE_PLUGIN_ROOT": ROOT}
+        subprocess.run(["sh", os.path.join(ROOT, "hooks", "update.sh")], env=env, check=True)
+        with open(os.path.join(dest, "calmline.py")) as f, open(os.path.join(ROOT, "calmline.py")) as g:
+            self.assertEqual(f.read(), g.read())
+        with open(os.path.join(dest, "my_segments.py")) as f:
+            self.assertEqual(f.read(), "mine")
 
     def test_cli_reads_stdin(self):
         with open(os.path.join(ROOT, "fixtures", "full.json")) as f:
