@@ -14,15 +14,18 @@ done
 [ -n "$py" ] || { echo "calmline needs Python 3.8+ (python3)" >&2; exit 1; }
 
 # Run from a git clone in $dest: the files are already there, only settings need updating.
-if [ "$(cd "$(dirname "$0")" && pwd)" != "$dest" ]; then
-  mkdir -p "$dest"
-  for f in calmline.py CLAUDE.md my_segments.example.py; do
-    curl -fsSL "$src/$f" -o "$dest/$f"
+if [ "$(cd "$(dirname "$0")" && pwd)" = "$dest" ]; then
+  run="$dest/plugin"
+else
+  run="$dest"
+  mkdir -p "$dest/fixtures"
+  for f in calmline.py CLAUDE.md my_segments.example.py fixtures/full.json fixtures/minimal.json; do
+    curl -fsSL "$src/plugin/$f" -o "$dest/$f"
   done
 fi
 
 # Point statusLine at calmline; an existing statusLine is saved first so it can be restored.
-"$py" - "$settings" "$dest" "$py" <<'PY'
+"$py" - "$settings" "$run" "$py" <<'PY'
 import json, os, sys
 settings, dest, py = sys.argv[1:]
 data = {}
@@ -44,4 +47,4 @@ os.replace(tmp, settings)
 PY
 
 echo "calmline installed. It shows up in Claude Code within a few seconds."
-echo "To change it, ask Claude in $dest, e.g. \"make it one line with only my usage\"."
+echo "To change it, ask Claude in $run, e.g. \"make it one line with only my usage\"."

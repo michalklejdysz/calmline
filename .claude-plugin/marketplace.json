@@ -1,10 +1,12 @@
 {
   "name": "calmline",
-  "owner": { "name": "Michał Klejdysz" },
+  "owner": {
+    "name": "Michał Klejdysz"
+  },
   "plugins": [
     {
       "name": "calmline",
-      "source": "./",
+      "source": "./plugin",
       "description": "A calm status line for Claude Code. Minimal or packed, just ask your Claude to change it."
     }
   ]

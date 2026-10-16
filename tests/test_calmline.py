@@ -7,7 +7,8 @@ import tempfile
 import time
 import unittest
 
-ROOT = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
+REPO = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
+ROOT = os.path.join(REPO, "plugin")
 sys.path.insert(0, ROOT)
 import calmline  # noqa: E402
 
@@ -125,9 +126,9 @@ class CalmlineTest(unittest.TestCase):
         settings = os.path.join(home, ".claude", "settings.json")
         with open(settings, "w") as f:
             json.dump({"theme": "dark", "statusLine": {"type": "command", "command": "~/old.sh"}}, f)
-        env = {**os.environ, "HOME": home, "CALMLINE_SRC": "file://" + ROOT}
+        env = {**os.environ, "HOME": home, "CALMLINE_SRC": "file://" + REPO}
         for _ in range(2):  # a reinstall must not overwrite the saved original
-            subprocess.run(["sh", os.path.join(ROOT, "install.sh")], env=env, check=True, capture_output=True)
+            subprocess.run(["sh", os.path.join(REPO, "install.sh")], env=env, check=True, capture_output=True)
         with open(settings) as f:
             data = json.load(f)
         self.assertEqual(data["theme"], "dark")
@@ -138,11 +139,11 @@ class CalmlineTest(unittest.TestCase):
     def test_install_script_from_a_git_clone_only_sets_the_status_line(self):
         home = os.path.join(self.tmp.name, "home")
         dest = os.path.join(home, ".claude", "calmline")
-        subprocess.run(["git", "clone", "-q", ROOT, dest], check=True)
+        subprocess.run(["git", "clone", "-q", REPO, dest], check=True)
         env = {**os.environ, "HOME": home, "CALMLINE_SRC": "file:///nonexistent"}  # any download would fail
         subprocess.run(["sh", os.path.join(dest, "install.sh")], env=env, check=True, capture_output=True)
         with open(os.path.join(home, ".claude", "settings.json")) as f:
-            self.assertTrue(json.load(f)["statusLine"]["command"].endswith("/.claude/calmline/calmline.py"))
+            self.assertTrue(json.load(f)["statusLine"]["command"].endswith("/.claude/calmline/plugin/calmline.py"))
 
     def test_update_hook_refreshes_the_copy_but_not_my_segments(self):
         dest = os.path.join(self.tmp.name, "home", ".claude", "calmline")

@@ -12,7 +12,7 @@ import tempfile
 import time
 
 ROOT = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
-sys.path.insert(0, ROOT)
+sys.path.insert(0, os.path.join(ROOT, "plugin"))
 import calmline  # noqa: E402
 
 PALETTE = {"31": "#ff6b6b", "32": "#5fd38d", "33": "#f2c94c", "36": "#56c8d8"}
@@ -20,7 +20,7 @@ FG, DIMMED, BG, CHROME = "#e6e6e6", "#7a7f87", "#14161a", "#22252b"
 CHAR_W, LINE_H, PAD = 8.9, 22, 28
 FRAME_S = 3.2
 
-with open(os.path.join(ROOT, "fixtures", "full.json")) as f:
+with open(os.path.join(ROOT, "plugin", "fixtures", "full.json")) as f:
     BASE = json.load(f)
 
 

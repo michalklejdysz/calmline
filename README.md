@@ -46,7 +46,7 @@ More to try:
 
 > Make the weekly limit turn yellow at 30%.
 
-Your changes live in `~/.claude/calmline/my_segments.py`. Updates never touch it. [CLAUDE.md](CLAUDE.md) tells your Claude the rules: what data exists, how to test, what keeps the line fast.
+Your changes live in `~/.claude/calmline/my_segments.py`. Updates never touch it. [CLAUDE.md](plugin/CLAUDE.md) tells your Claude the rules: what data exists, how to test, what keeps the line fast.
 
 ## What the default shows
 
